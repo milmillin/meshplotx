@@ -539,6 +539,13 @@ class Plot:
         filename.write_text(self.to_html())
         print(f"Plot saved to file {filename}.")
 
+    def get_meshes(self) -> list[tuple[ObjectID, tuple[np.ndarray, np.ndarray, np.ndarray]]]:
+        res: list[tuple[ObjectID, tuple[np.ndarray, np.ndarray, np.ndarray]]] = []
+        for oid, obj in self.__obj.items():
+            if isinstance(obj, _MeshObject):
+                res.append((oid, (obj.v, obj.f, obj.c)))
+        return res
+
     # --------------
     # Internal Functions
 
