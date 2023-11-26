@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from typing import Optional
+from ipywidgets import embed
 
 
 # Helper functions
@@ -71,3 +72,9 @@ def is_notebook() -> bool:
             return False  # Other type (?)
     except NameError:
         return False  # Probably standard Python interpreter
+
+
+def get_html_header() -> str:
+    return embed.load_requirejs_template.format(
+        embed_url=embed.DEFAULT_EMBED_REQUIREJS_URL, use_cors=' crossorigin="annonymous"'
+    )
