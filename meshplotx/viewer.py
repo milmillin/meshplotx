@@ -181,6 +181,9 @@ class Plot:
         assert len(v.shape) == 2 and v.shape[-1] == 3, "v must have shape (n_V, 3)"
         assert len(f.shape) == 2 and f.shape[-1] == 3, "f must have shape (n_F, 3)"
 
+        og_v = v
+        og_f = f
+
         # Type adjustment vertices
         v = v.astype("float32", copy=False)
 
@@ -188,6 +191,9 @@ class Plot:
             mesh_shading = self.__ms
 
         # Color setup
+        if c is None:
+            c = np.array([1.0, 0.874, 0.0])
+        og_c = c
         colors, coloring = self.__get_colors(v, f, c, colormap=mesh_shading.colormap, v_range=mesh_shading.v_range)
 
         # Type adjustment faces and colors
@@ -279,9 +285,9 @@ class Plot:
             np.min(v, axis=0),
             mesh_shading,
             coloring,
-            v,
-            f,
-            c,
+            og_v,
+            og_f,
+            og_c,
             wireframe,
             bbox,
         )
@@ -416,13 +422,13 @@ class Plot:
             obj.geometry.attributes["index"].needsUpdate = True
             obj.f = faces
         if colors is not None:
+            obj.c = colors
             colors, coloring = self.__get_colors(
                 obj.v, obj.f, colors, colormap=obj.shading.colormap, v_range=obj.shading.v_range
             )
             colors = colors.astype("float32", copy=False)
             obj.geometry.attributes["color"].array = colors
             obj.geometry.attributes["color"].needsUpdate = True
-            obj.c = colors
 
     def update_points(
         self, oid: ObjectID, points: Optional[np.ndarray] = None, colors: Optional[np.ndarray] = None
@@ -597,7 +603,7 @@ class Plot:
         self,
         v: np.ndarray,
         f: np.ndarray,
-        c: Optional[np.ndarray],
+        c: np.ndarray,
         v_range: Optional[tuple[float, float]],
         colormap: str,
     ) -> tuple[np.ndarray, Literal["VertexColors", "FaceColors"]]:
@@ -609,33 +615,27 @@ class Plot:
         returns: ((n_V, 3), "VertexColors") or ((n_F * 3, 3), "FaceColors")
         """
         coloring = "VertexColors"
-        if c is None:
+        if c.shape == (3,):  # Single color
             colors = np.ones_like(v)
-            colors[:, 0] = 1.0
-            colors[:, 1] = 0.874
-            colors[:, 2] = 0.0
-        else:
-            if c.shape == (3,):  # Single color
-                colors = np.ones_like(v)
-                colors[:, 0] = c[0]
-                colors[:, 1] = c[1]
-                colors[:, 2] = c[2]
-            elif len(c.shape) == 2 and c.shape[-1] == 3:  # Color values for
-                if c.shape[0] == f.shape[0]:  # faces
-                    colors = np.hstack([c, c, c]).reshape((-1, 3))
-                    coloring = "FaceColors"
-                elif c.shape[0] == v.shape[0]:  # vertices
-                    colors = c
-                else:  # Wrong size
-                    raise ValueError(f"Invalid color shape: {c.shape}")
-            elif c.shape == (f.shape[0],):  # Function values for faces
-                cc = get_colors(c, colormap, v_range)
-                colors = np.hstack([cc, cc, cc]).reshape((-1, 3))
+            colors[:, 0] = c[0]
+            colors[:, 1] = c[1]
+            colors[:, 2] = c[2]
+        elif len(c.shape) == 2 and c.shape[-1] == 3:  # Color values for
+            if c.shape[0] == f.shape[0]:  # faces
+                colors = np.hstack([c, c, c]).reshape((-1, 3))
                 coloring = "FaceColors"
-            elif c.shape == (v.shape[0],):  # Function values for vertices
-                colors = get_colors(c, colormap, v_range)
-            else:
+            elif c.shape[0] == v.shape[0]:  # vertices
+                colors = c
+            else:  # Wrong size
                 raise ValueError(f"Invalid color shape: {c.shape}")
+        elif c.shape == (f.shape[0],):  # Function values for faces
+            cc = get_colors(c, colormap, v_range)
+            colors = np.hstack([cc, cc, cc]).reshape((-1, 3))
+            coloring = "FaceColors"
+        elif c.shape == (v.shape[0],):  # Function values for vertices
+            colors = get_colors(c, colormap, v_range)
+        else:
+            raise ValueError(f"Invalid color shape: {c.shape}")
         return colors, coloring
 
     def __get_point_colors(
