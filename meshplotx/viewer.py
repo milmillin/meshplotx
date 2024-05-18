@@ -136,6 +136,7 @@ class Plot:
         self._cam = p3s.PerspectiveCamera(
             position=[0, 0, 1],
             lookAt=[0, 0, 0],
+            far=20000,
             fov=self.__s.fov,  # type: ignore
             aspect=self.__s.width / self.__s.height,  # type: ignore
             children=[self._light],
@@ -552,6 +553,9 @@ class Plot:
                 res.append((oid, (obj.v, obj.f, obj.c)))
         return res
 
+    def update(self):
+        self.__update_view()
+
     # --------------
     # Internal Functions
 
@@ -560,7 +564,6 @@ class Plot:
         oid = self.__count
         self.__obj[oid] = obj
         self.__count += 1
-        self.__update_view()
         return oid
 
     def __compute_line_object(self, lines: np.ndarray, line_shading: LineShading) -> _LineObject:
